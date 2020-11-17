@@ -25,18 +25,20 @@ jobs:
         id: fmt_branch
 
       - name: Check for updated starships.json
-        run: git diff-index --quiet HEAD -- starships.json
+        run: if (git diff-index --quiet HEAD -- starships.json); then exit 1; else exit 0; fi
 
       - name: Commit and Push unstaged starships
-        if: failure()
+        if: success()
         run: |
           __PR_BASE_BRANCH=$(git branch --show-current)
           PR_BASE_BRANCH=${{ steps.fmt_branch.outputs.branch }}
+          git config user.email "${{ github.actor }}@users.noreply.github.com"
+          git config user.name "${{ github.actor }}"
           git checkout -b ${PR_BASE_BRANCH}_updated-starships
           git add starships.json
           git commit -m "[STARSHIPS] updated json"
-          git push -u origin ${PR_BASE_BRANCH}_updated-starships
-          git checkout ${PR_BASE_BRANCH}
+          git push -u origin "${PR_BASE_BRANCH}_updated-starships"
+          git checkout "${PR_BASE_BRANCH}"
 
       - name: Submit PR to update starships
         if: success()
@@ -48,6 +50,6 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               title: "[STARSHIPS] updated json",
-              head: ${{ steps.fmt_branch.outputs.branch }}_updated-starships,
-              base: ${{ steps.fmt_branch.outputs.branch }},
+              head: "${{ steps.fmt_branch.outputs.branch }}_updated-starships",
+              base: "${{ steps.fmt_branch.outputs.branch }}",
             })
