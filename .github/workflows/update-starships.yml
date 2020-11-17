@@ -1,0 +1,54 @@
+name: Update-Starships
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Update starships.json
+        run: curl -sL https://swapi.dev/api/starships/12/ -o starships.json
+
+      - name: Check for updated starships.json
+        run: git diff-index --quiet HEAD -- starships.json
+
+      - name: debug
+        run: echo $GITHUB_EVENT_PATH
+
+      - name: Format branch name
+        shell: bash
+        run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
+        id: fmt_branch
+
+      - name: Commit and Push unstaged starships
+        if: failure()
+        run: |
+          __PR_BASE_BRANCH=$(git branch --show-current)
+          PR_BASE_BRANCH=${{ steps.fmt_branch.outputs.branch }}
+          git checkout -b ${PR_BASE_BRANCH}_updated-starships
+          git add starships.json
+          git commit -m "[STARSHIPS] updated json"
+          git push -u origin ${PR_BASE_BRANCH}_updated-starships
+          git checkout ${PR_BASE_BRANCH}
+
+      - name: Commit and Push unstaged starships
+        if: success()
+        run: |
+          COMMIT_MESSAGE="$(jq -r ".head_commit.message" "$GITHUB_EVENT_PATH" | head -1)"
+          REPO_FULLNAME=$(jq -r ".repository.full_name" "$GITHUB_EVENT_PATH")
+          PR_BASE_BRANCH=${{ steps.fmt_branch.outputs.branch }}
+          PR_BRANCH=${PR_BASE_BRANCH}_updated-starships
+          curl -o .output -s -w "%{http_code}\n" \
+           --data "{\"title\":\"$COMMIT_MESSAGE\", \"head\": \"$PR_BRANCH\", \"base\": \"$PR_BASE_BRANCH\"}" \
+           -X POST \
+           -H "Authorization: token $GITHUB_TOKEN" \
+           -H "Accept: application/vnd.github.v3+json" \
+           "$GITHUB_API_URL/repos/$REPO_FULLNAME/pulls"
+
