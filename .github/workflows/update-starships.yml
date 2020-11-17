@@ -20,7 +20,7 @@ jobs:
         run: git diff-index --quiet HEAD -- starships.json
 
       - name: debug
-        run: echo $GITHUB_EVENT_PATH
+        run: cat $GITHUB_EVENT_PATH
 
       - name: Format branch name
         shell: bash
@@ -38,7 +38,7 @@ jobs:
           git push -u origin ${PR_BASE_BRANCH}_updated-starships
           git checkout ${PR_BASE_BRANCH}
 
-      - name: Commit and Push unstaged starships
+      - name: Submit PR to update starships
         if: success()
         run: |
           COMMIT_MESSAGE="$(jq -r ".head_commit.message" "$GITHUB_EVENT_PATH" | head -1)"
@@ -48,7 +48,7 @@ jobs:
           curl -o .output -s -w "%{http_code}\n" \
            --data "{\"title\":\"$COMMIT_MESSAGE\", \"head\": \"$PR_BRANCH\", \"base\": \"$PR_BASE_BRANCH\"}" \
            -X POST \
-           -H "Authorization: token $GITHUB_TOKEN" \
+           -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
            -H "Accept: application/vnd.github.v3+json" \
            "$GITHUB_API_URL/repos/$REPO_FULLNAME/pulls"
 
