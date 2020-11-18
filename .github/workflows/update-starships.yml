@@ -9,8 +9,7 @@ on:
 jobs:
   pull_starships:
     runs-on: ubuntu-latest
-    outputs:
-      needs_sync: ${{ steps.is_update_required.outputs.needs_sync }}
+
     steps:
       - uses: actions/checkout@v2
 
@@ -33,7 +32,7 @@ jobs:
 
       - name: Commit and Push unstaged starships
         if: ${{ steps.is_update_required.outputs.needs_sync }}
-        run: |
+        run: |pr
           PR_BRANCH=${{ steps.fmt_branch.outputs.branch }}_updated-starships
           git config user.email "${{ github.actor }}@users.noreply.github.com"
           git config user.name "${{ github.actor }}"
