@@ -41,7 +41,7 @@ jobs:
           git checkout -b ${PR_BASE_BRANCH}_updated-starships
           git add starships.json
           git commit -m "[STARSHIPS] updated json"
-          git push -u origin "${PR_BASE_BRANCH}_updated-starships"
+          git push -fu origin "${PR_BASE_BRANCH}_updated-starships"
           git checkout "${PR_BASE_BRANCH}"
 
       - name: Submit PR to update starships
