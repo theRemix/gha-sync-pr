@@ -59,7 +59,8 @@ jobs:
                 base: "${{ steps.fmt_branch.outputs.branch }}",
               })
             }catch(error){
-              if(error.constructor.name === 'HttpError' && error.toString().indexOf('A pull request already exists') > 0){
+              console.log('#####ERROR', error.name, error.status, error)
+              if(error.name === 'HttpError' && error.status === 422 && error.toString().indexOf('A pull request already exists') > 0){
                 console.log('A PR exists. Skipping PR Creation.')
               } else {
                 throw error
