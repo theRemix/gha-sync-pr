@@ -25,29 +25,14 @@ jobs:
         id: is_update_required
         run: if (git diff-index --quiet HEAD -- starships.json); then echo "::set-output name=needs_sync::${{ false }}"; else echo "::set-output name=needs_sync::${{ true }}"; fi
 
-  push_pr:
-    needs: pull_starships
-    if: ${{ needs.pull_starships.outputs.needs_sync }}
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v2
-
       - name: Format branch name
+        if: ${{ steps.is_update_required.outputs.needs_sync }}
         id: fmt_branch
         shell: bash
         run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
 
-      - name: Update starships.json
-        env:
-          SECRET_STARSHIP_ID: ${{ secrets.secret_starship_id }}
-        run: |
-          echo "https://swapi.dev/api/starships/$SECRET_STARSHIP_ID/"
-          curl -sL "https://swapi.dev/api/starships/$SECRET_STARSHIP_ID/" -o starships.json
-
-      - name: Check for updated starships.json
-        id: is_update_required
       - name: Commit and Push unstaged starships
+        if: ${{ steps.is_update_required.outputs.needs_sync }}
         run: |
           PR_BRANCH=${{ steps.fmt_branch.outputs.branch }}_updated-starships
           git config user.email "${{ github.actor }}@users.noreply.github.com"
@@ -56,21 +41,22 @@ jobs:
           git add starships.json
 
       - name: Check for clean working tree
-        id: is_update_required
+        if: ${{ steps.is_update_required.outputs.needs_sync }}
+        id: needs_pr
         run: |
           PR_BRANCH=${{ steps.fmt_branch.outputs.branch }}_updated-starships
           if (git diff-index --quiet HEAD -- starships.json)
           then
             echo "Nothing to push, PR branch $PR_BRANCH is up to date"
-            echo "::set-output name=is_pr_required::${{ false }}"
+            echo "::set-output name=pr_required::${{ false }}"
           else
             git commit -m "[STARSHIPS] updated json"
             git push -fu origin $PR_BRANCH
-            echo "::set-output name=is_pr_required::${{ true }}"
+            echo "::set-output name=pr_required::${{ true }}"
           fi
 
       - name: Submit PR to update starships
-        if: ${{ steps.is_pr_required.outputs.needs_pr }}
+        if: ${{ steps.is_update_required.outputs.needs_sync }} && ${{ steps.needs_pr.outputs.pr_required }}
         uses: actions/github-script@v3
         id: set-result
         with:
