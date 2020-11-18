@@ -38,6 +38,15 @@ jobs:
         shell: bash
         run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
 
+      - name: Update starships.json
+        env:
+          SECRET_STARSHIP_ID: ${{ secrets.secret_starship_id }}
+        run: |
+          echo "https://swapi.dev/api/starships/$SECRET_STARSHIP_ID/"
+          curl -sL "https://swapi.dev/api/starships/$SECRET_STARSHIP_ID/" -o starships.json
+
+      - name: Check for updated starships.json
+        id: is_update_required
       - name: Commit and Push unstaged starships
         run: |
           PR_BRANCH=${{ steps.fmt_branch.outputs.branch }}_updated-starships
