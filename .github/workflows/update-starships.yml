@@ -23,8 +23,7 @@ jobs:
 
       - name: Check for updated starships.json
         id: is_update_required
-        # run: if (git diff-index --quiet HEAD -- starships.json); then exit 1; else exit 0; fi
-        run: if (false); then echo "::set-output name=needs_sync::${{ false }}"; else echo "::set-output name=needs_sync::${{ true }}"; fi
+        run: if (git diff-index --quiet HEAD -- starships.json); then echo "::set-output name=needs_sync::${{ false }}"; else echo "::set-output name=needs_sync::${{ true }}"; fi
 
   push_pr:
     needs: pull_starships
