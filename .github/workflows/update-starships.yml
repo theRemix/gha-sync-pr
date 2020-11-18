@@ -50,10 +50,18 @@ jobs:
         id: set-result
         with:
           script: |
-            github.pulls.create({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              title: "[STARSHIPS] updated json",
-              head: "${{ steps.fmt_branch.outputs.branch }}_updated-starships",
-              base: "${{ steps.fmt_branch.outputs.branch }}",
-            })
+            try {
+              await github.pulls.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: "[STARSHIPS] updated json",
+                head: "${{ steps.fmt_branch.outputs.branch }}_updated-starships",
+                base: "${{ steps.fmt_branch.outputs.branch }}",
+              })
+            }catch(error){
+              if(error instanceof HttpError && error.toString().indexOf('A pull request already exists') > 0){
+                console.log('A PR exists. Skipping PR Creation.')
+              } else {
+                throw error
+              }
+            }
