@@ -7,9 +7,10 @@ on:
     branches: [ main ]
 
 jobs:
-  sync:
+  pull_starships:
     runs-on: ubuntu-latest
-
+    outputs:
+      needs_sync: ${{ steps.is_update_required.outputs.needs_sync }}
     steps:
       - uses: actions/checkout@v2
 
@@ -20,19 +21,25 @@ jobs:
           echo "https://swapi.dev/api/starships/$SECRET_STARSHIP_ID/"
           curl -sL "https://swapi.dev/api/starships/$SECRET_STARSHIP_ID/" -o starships.json
 
-      - name: debug
-        run: cat $GITHUB_EVENT_PATH
+      - name: Check for updated starships.json
+        id: is_update_required
+        # run: if (git diff-index --quiet HEAD -- starships.json); then exit 1; else exit 0; fi
+        run: if (false); then echo "::set-output name=needs_sync::${{ false }}"; else echo "::set-output name=needs_sync::${{ true }}"; fi
+
+  push_pr:
+    needs: pull_starships
+    if: ${{ needs.pull_starships.outputs.needs_sync }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
 
       - name: Format branch name
+        id: fmt_branch
         shell: bash
         run: echo "##[set-output name=branch;]$(echo ${GITHUB_REF#refs/heads/})"
-        id: fmt_branch
-
-      - name: Check for updated starships.json
-        run: if (git diff-index --quiet HEAD -- starships.json); then exit 1; else exit 0; fi
 
       - name: Commit and Push unstaged starships
-        if: success()
         run: |
           __PR_BASE_BRANCH=$(git branch --show-current)
           PR_BASE_BRANCH=${{ steps.fmt_branch.outputs.branch }}
@@ -45,7 +52,6 @@ jobs:
           git checkout "${PR_BASE_BRANCH}"
 
       - name: Submit PR to update starships
-        if: success()
         uses: actions/github-script@v3
         id: set-result
         with:
