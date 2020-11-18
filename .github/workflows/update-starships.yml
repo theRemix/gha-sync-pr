@@ -41,17 +41,28 @@ jobs:
 
       - name: Commit and Push unstaged starships
         run: |
-          __PR_BASE_BRANCH=$(git branch --show-current)
-          PR_BASE_BRANCH=${{ steps.fmt_branch.outputs.branch }}
+          PR_BRANCH=${{ steps.fmt_branch.outputs.branch }}_updated-starships
           git config user.email "${{ github.actor }}@users.noreply.github.com"
           git config user.name "${{ github.actor }}"
-          git checkout -b ${PR_BASE_BRANCH}_updated-starships
+          git checkout -b $PR_BRANCH
           git add starships.json
-          git commit -m "[STARSHIPS] updated json"
-          git push -fu origin "${PR_BASE_BRANCH}_updated-starships"
-          git checkout "${PR_BASE_BRANCH}"
+
+      - name: Check for clean working tree
+        id: is_update_required
+        run: |
+          PR_BRANCH=${{ steps.fmt_branch.outputs.branch }}_updated-starships
+          if (git diff-index --quiet HEAD -- starships.json)
+          then
+            echo "Nothing to push, PR branch $PR_BRANCH is up to date"
+            echo "::set-output name=is_pr_required::${{ false }}"
+          else
+            git commit -m "[STARSHIPS] updated json"
+            git push -fu origin $PR_BRANCH
+            echo "::set-output name=is_pr_required::${{ true }}"
+          fi
 
       - name: Submit PR to update starships
+        if: ${{ steps.is_pr_required.outputs.needs_pr }}
         uses: actions/github-script@v3
         id: set-result
         with:
@@ -65,7 +76,6 @@ jobs:
                 base: "${{ steps.fmt_branch.outputs.branch }}",
               })
             }catch(error){
-              console.log('#####ERROR', error.name, error.status, error)
               if(error.name === 'HttpError' && error.status === 422 && error.toString().indexOf('A pull request already exists') > 0){
                 console.log('A PR exists. Skipping PR Creation.')
               } else {
